@@ -4,6 +4,7 @@ from constants import SHOT_RADIUS, SHOT_COLOR, SHOT_LINE_WIDTH, SHOT_LINE_LENGTH
 
 class Shot(pygame.sprite.Sprite):
     def __init__(self, x: float, y: float) -> None:
+        self.damage = 10
         # same container logic CircleShape had
         if hasattr(self, "containers"):
             super().__init__(self.containers)

@@ -7,7 +7,7 @@ from constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_COLOR
 from enemy import Enemy
 from game import Game, load_game, save_game
 from logger import log_state
-from upgrades import Upgrade
+from upgrades import Upgrade, Upgrades
 
 def main():
     
@@ -21,7 +21,7 @@ def main():
     pygame.display.set_caption("My Game")
 
     game = Game(screen) 
-    upgrade = Upgrade(game)  # Create an instance of the Upgrade class
+    upgrades = Upgrades(game)  # Create an instance of the Upgrades class
 
     # Main game loop
     running = True
@@ -30,7 +30,7 @@ def main():
             if event.type == pygame.QUIT:
                 save_game(game.to_save_data())
                 running = False
-
+            
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 game.handle_click(event.pos)
 

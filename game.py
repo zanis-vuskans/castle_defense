@@ -6,7 +6,8 @@ from enemy import Enemy
 from player import Player
 from shot import Shot
 from button import Button
-from upgrades import Upgrade
+from tower import Tower
+from upgrades import Upgrades, Upgrade
 
 
 import json
@@ -37,84 +38,108 @@ class Game:
         self.player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - margin)
 
         self.shots = []
+        self.towers = []
+        self.enemies = []
 
         saved = load_game()
         self.points = saved.get("points", 0)
         self.kills = saved.get("kills", 0)
-        self.click_damage = saved.get("click_damage", 1)
+
+        # Player's click damage, default is 1 if not found in save
+        self.click_damage = saved.get("click_damage", 10)
+
+        # Tower Stats
+        self.tower_count = saved.get("tower_count", 0)
+        self.tower_damage = saved.get("tower_damage", 1)
+        self.tower_fire_rate = saved.get("tower_fire_rate", 2.0)    
+
+        self.sync_towers()
+        
 
         self.enemy = self.spawn_enemy()
+        self.upgrades = Upgrades(self)
+        self.upgrades.update() 
 
-        self.upgrades = Upgrade(self)
-        self.upgrade_button = Button(
-            SCREEN_WIDTH - 150 - margin,
-            SCREEN_HEIGHT - 0 - margin,
-            200,
-            50,
-            "",
-        )
-        self.update_upgrade_button()
-        self.enemy = self.spawn_enemy()
-
-    def update_upgrade_button(self):
-        cost = self.upgrades.click_damage_cost()
-        self.upgrade_button.set_text(f"Upgrade Click Damage ({cost} pts)")
-        self.upgrade_button.enabled = self.upgrades.can_afford_click_damage()
-
+    
     def to_save_data(self):
         return {
             "points": self.points,
             "kills": self.kills,
             "click_damage": self.click_damage,
+            "tower_count": self.tower_count,
+            "tower_damage": self.tower_damage,
+            "tower_fire_rate": self.tower_fire_rate,
         }
 
     def spawn_enemy(self):
         margin = 100
         x = random.randint(margin, SCREEN_WIDTH - margin)
         y = random.randint(margin, SCREEN_HEIGHT // 2 - margin)
-
-        health = 5 + self.kills * 2
+        health = 50 + self.kills * 2
         return Enemy(x, y, max_health=health)
 
     def handle_click(self, pos):
-        if self.upgrade_button.is_clicked(pos):
-            self.upgrades.upgrade_click_damage()
-            return  # don't shoot when clicking the button
+        if self.upgrades.handle_click(pos):
+            return
         self.shoot(pos)
-        
+
+
 
     def shoot(self, target_position):
         shot = self.player.shoot(target_position)
-
         if shot is not None:
+            shot.damage = self.click_damage
             self.shots.append(shot)
 
+    def sync_towers(self):
+        margin = 100
+
+        # create towers until we have as many as tower_count says
+        while len(self.towers) < self.tower_count:
+            x = random.randint(margin, SCREEN_WIDTH - margin)
+            y = random.randint(margin, SCREEN_HEIGHT - margin)
+            self.towers.append(Tower(x, y))
+
+        # apply current upgrade stats to every tower
+        for tower in self.towers:
+            tower.damage = self.tower_damage
+            tower.fire_rate = self.tower_fire_rate
+
     def update(self, dt):
-        self.update_upgrade_button()
-        
+        self.upgrades.update()
+
+        for tower in self.towers:
+            shot = tower.update(dt, [self.enemy])
+            if shot:
+                self.shots.append(shot)
+
+        screen_rect = self.screen.get_rect()
+
         for shot in self.shots[:]:
             shot.update(dt)
 
-            if shot.position.distance_to(self.enemy.position) <= (
-                shot.radius + self.enemy.radius
-            ):
+            if shot.collides_with(self.enemy):
                 self.shots.remove(shot)
-                self.points += 1  
+                self.points += 1
 
-                if self.enemy.take_damage(self.click_damage):
+                if self.enemy.take_damage(shot.damage):
                     self.points += 10
                     self.kills += 1
-                    self.enemy = self.spawn_enemy()    
+                    self.enemy = self.spawn_enemy()
+
+            elif not screen_rect.collidepoint(shot.position):
+                self.shots.remove(shot)    
 
     def draw(self):
         self.screen.fill(SCREEN_COLOR)
-        width, height = self.screen.get_size()
 
         self.enemy.draw(self.screen)
         self.player.draw(self.screen)
 
-        self.upgrade_button.draw(self.screen)
+        for tower in self.towers:
+            tower.draw(self.screen)
 
+        self.upgrades.draw(self.screen)
 
         for shot in self.shots:
             shot.draw(self.screen)
