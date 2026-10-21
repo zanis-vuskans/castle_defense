@@ -5,7 +5,7 @@ pygame.init()
 from constants import SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_COLOR
 
 from enemy import Enemy
-from game import Game, load_game, save_game, upgrade_click_damage_button
+from game import Game, load_game, save_game
 from logger import log_state
 from upgrades import Upgrade
 
@@ -33,12 +33,6 @@ def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 game.handle_click(event.pos)
-            if upgrade_click_damage_button.is_clicked(event):
-                upgrade.upgrade_click_damage()
-                print(
-                    f"Upgraded click damage to {game.click_damage}. "
-                    f"Next upgrade cost: {upgrade.upgrade_cost}"
-                )
 
         # Game logic goes here
         log_state()

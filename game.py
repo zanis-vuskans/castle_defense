@@ -6,6 +6,7 @@ from enemy import Enemy
 from player import Player
 from shot import Shot
 from button import Button
+from upgrades import Upgrade
 
 
 import json
@@ -28,20 +29,6 @@ def load_game():
 
 
 
-margin = 20
-button_width = 300
-button_height = 60
-
-upgrade_click_damage_button = Button(
-    SCREEN_WIDTH - button_width - margin,
-    SCREEN_HEIGHT - button_height - margin,
-    button_width,
-    button_height,
-    "Upgrade Click Damage",
-)
-
-
-
 class Game:
     def __init__(self, screen):
         self.screen = screen
@@ -57,6 +44,22 @@ class Game:
         self.click_damage = saved.get("click_damage", 1)
 
         self.enemy = self.spawn_enemy()
+
+        self.upgrades = Upgrade(self)
+        self.upgrade_button = Button(
+            SCREEN_WIDTH - 150 - margin,
+            SCREEN_HEIGHT - 0 - margin,
+            200,
+            50,
+            "",
+        )
+        self.update_upgrade_button()
+        self.enemy = self.spawn_enemy()
+
+    def update_upgrade_button(self):
+        cost = self.upgrades.click_damage_cost()
+        self.upgrade_button.set_text(f"Upgrade Click Damage ({cost} pts)")
+        self.upgrade_button.enabled = self.upgrades.can_afford_click_damage()
 
     def to_save_data(self):
         return {
@@ -74,7 +77,11 @@ class Game:
         return Enemy(x, y, max_health=health)
 
     def handle_click(self, pos):
+        if self.upgrade_button.is_clicked(pos):
+            self.upgrades.upgrade_click_damage()
+            return  # don't shoot when clicking the button
         self.shoot(pos)
+        
 
     def shoot(self, target_position):
         shot = self.player.shoot(target_position)
@@ -83,6 +90,8 @@ class Game:
             self.shots.append(shot)
 
     def update(self, dt):
+        self.update_upgrade_button()
+        
         for shot in self.shots[:]:
             shot.update(dt)
 
@@ -104,7 +113,7 @@ class Game:
         self.enemy.draw(self.screen)
         self.player.draw(self.screen)
 
-        upgrade_click_damage_button.draw(self.screen)
+        self.upgrade_button.draw(self.screen)
 
 
         for shot in self.shots:
