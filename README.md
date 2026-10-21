@@ -1,7 +1,8 @@
 First Solo Project: Terminal Incremental Game in Python
-A project plan for the boot.dev solo project, inspired by Magic Archery and Tower Wizard.
+A project plan for the boot.dev solo project, inspired by Magic Archery
+
 Why an incremental game
-Both games are short incremental (idle) games by the same developer. You gather a resource, spend it on upgrades, and those upgrades speed up gathering. The core loop is simple, but a lot of interesting code sits underneath it, which makes it a great fit for a first solo project.
+You gather a resource, spend it on upgrades, and those upgrades speed up gathering. The core loop is simple, but a lot of interesting code sits underneath it, which makes it a great fit for a first solo project.
 
 Recommendation
 Build a terminal-based incremental game (a wizard tower or an archery trainer) in Python. You don't need graphics to make it fun.
