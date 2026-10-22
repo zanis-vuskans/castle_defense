@@ -1,7 +1,7 @@
 
 import pygame
 import random
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT,SCREEN_COLOR
+from constants import MAX_TOWERS, SCREEN_WIDTH, SCREEN_HEIGHT,SCREEN_COLOR
 from enemy import Enemy
 from player import Player
 from shot import Shot
@@ -44,15 +44,12 @@ class Game:
         saved = load_game()
         self.points = saved.get("points", 0)
         self.kills = saved.get("kills", 0)
-
-        # Player's click damage, default is 1 if not found in save
         self.click_damage = saved.get("click_damage", 10)
 
         # Tower Stats
-        self.tower_count = saved.get("tower_count", 0)
+        self.tower_count = min(saved.get("tower_count", 0), MAX_TOWERS)
         self.tower_damage = saved.get("tower_damage", 1)
-        self.tower_fire_rate = saved.get("tower_fire_rate", 2.0)    
-
+        self.tower_fire_rate = saved.get("tower_fire_rate", 2.0)
         self.sync_towers()
         
 
@@ -92,16 +89,26 @@ class Game:
             self.shots.append(shot)
 
     def sync_towers(self):
-        margin = 100
+        self.tower_count = min(self.tower_count, MAX_TOWERS)
 
-        # create towers until we have as many as tower_count says
+        # create any missing towers (positions get set below)
         while len(self.towers) < self.tower_count:
-            x = random.randint(margin, SCREEN_WIDTH - margin)
-            y = random.randint(margin, SCREEN_HEIGHT - margin)
-            self.towers.append(Tower(x, y))
+            self.towers.append(Tower(0, 0))
 
-        # apply current upgrade stats to every tower
-        for tower in self.towers:
+        # lay them out in a horizontal line, evenly spaced
+        margin = 100
+        y = SCREEN_HEIGHT - margin - 60   # row sits just above the player
+        count = len(self.towers)
+        spacing = (SCREEN_WIDTH - 2 * margin) / max(count - 1, 1)
+
+        for i, tower in enumerate(self.towers):
+            if count == 1:
+                x = SCREEN_WIDTH // 2
+            else:
+                x = margin + i * spacing
+            tower.position = pygame.Vector2(x, y)
+
+            # apply current upgrade stats
             tower.damage = self.tower_damage
             tower.fire_rate = self.tower_fire_rate
 

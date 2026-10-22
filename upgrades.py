@@ -1,17 +1,18 @@
 # upgrades.py
 from button import Button
-from constants import SCREEN_WIDTH, SCREEN_HEIGHT
+from constants import SCREEN_WIDTH, SCREEN_HEIGHT, MAX_TOWERS
 
 
 class Upgrade:
-    def __init__(self, game, label, stat, start, step=1, base_cost=10, multiplier=1.5):
+    def __init__(self, game, label, stat, start, step=1, base_cost=10, multiplier=1.5, max_level=None):
         self.game = game
-        self.label = label          # text shown on the button
-        self.stat = stat            # attribute name on Game, e.g. "click_damage"
-        self.start = start          # the stat's starting value
-        self.step = step            # how much one purchase adds
+        self.label = label
+        self.stat = stat
+        self.start = start
+        self.step = step
         self.base_cost = base_cost
         self.multiplier = multiplier
+        self.max_level = max_level      # None = unlimited
         self.button = Button(0, 0, 200, 50, "")
 
     def level(self):
@@ -22,8 +23,11 @@ class Upgrade:
     def cost(self):
         return int(self.base_cost * self.multiplier ** self.level())
 
+    def is_maxed(self):
+        return self.max_level is not None and self.level() >= self.max_level
+
     def can_afford(self):
-        return self.game.points >= self.cost()
+        return not self.is_maxed() and self.game.points >= self.cost()
 
     def buy(self):
         if not self.can_afford():
@@ -33,7 +37,10 @@ class Upgrade:
         return True
 
     def refresh_button(self):
-        self.button.set_text(f"{self.label} ({self.cost()} pts)")
+        if self.is_maxed():
+            self.button.set_text(f"{self.label} (MAX)")
+        else:
+            self.button.set_text(f"{self.label} ({self.cost()} pts)")
         self.button.enabled = self.can_afford()
 
 
@@ -44,7 +51,7 @@ class Upgrades:
             Upgrade(game, "Click Damage",    "click_damage",    start=10,   step=5),
             Upgrade(game, "Tower Damage",    "tower_damage",    start=1,   step=1),
             Upgrade(game, "Tower Fire Rate", "tower_fire_rate", start=2.0, step=0.5),
-            Upgrade(game, "Buy Tower",       "tower_count",     start=0,   step=1, base_cost=500),
+            Upgrade(game, "Buy Tower", "tower_count", start=0, step=1, base_cost=500, max_level=MAX_TOWERS),
         ]
 
         # Stack buttons upward from the bottom-right corner
