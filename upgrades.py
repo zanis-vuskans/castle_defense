@@ -50,7 +50,7 @@ class Upgrades:
         self.list = [
             Upgrade(game, "Click Damage",    "click_damage",    start=10,   step=5),
             Upgrade(game, "Tower Damage",    "tower_damage",    start=1,   step=1),
-            Upgrade(game, "Tower Fire Rate", "tower_fire_rate", start=2.0, step=0.5),
+            Upgrade(game, "Tower Fire Rate", "tower_fire_rate", start=0.5, step=0.5),
             Upgrade(game, "Buy Tower", "tower_count", start=0, step=1, base_cost=500, max_level=MAX_TOWERS),
         ]
 

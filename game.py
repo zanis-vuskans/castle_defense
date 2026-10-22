@@ -8,6 +8,7 @@ from shot import Shot
 from button import Button
 from tower import Tower
 from upgrades import Upgrades, Upgrade
+from wall import Wall
 
 
 import json
@@ -46,6 +47,11 @@ class Game:
         self.kills = saved.get("kills", 0)
         self.click_damage = saved.get("click_damage", 10)
 
+        #Wall
+        self.wall = Wall(y=SCREEN_HEIGHT - 200,
+                        max_health=saved.get("wall_max_health", 100))
+        self.wall.health = saved.get("wall_health", self.wall.max_health)
+
         # Tower Stats
         self.tower_count = min(saved.get("tower_count", 0), MAX_TOWERS)
         self.tower_damage = saved.get("tower_damage", 1)
@@ -53,7 +59,8 @@ class Game:
         self.sync_towers()
         
 
-        self.enemy = self.spawn_enemy()
+        self.spawn_timer = 0.0
+        self.enemies.append(self.spawn_enemy())
         self.upgrades = Upgrades(self)
         self.upgrades.update() 
 
@@ -66,14 +73,30 @@ class Game:
             "tower_count": self.tower_count,
             "tower_damage": self.tower_damage,
             "tower_fire_rate": self.tower_fire_rate,
+            "wall_max_health": self.wall.max_health,
+            "wall_health": self.wall.health,
         }
+
+    def spawn_interval(self):
+        # seconds between spawns: starts at 3s, drops to a floor of 0.6s
+        return max(0.6, 3.0 - self.kills * 0.04)
+
+    def max_enemies(self):
+        # starts at 1, +1 every 5 kills, capped at 12
+        return min(1 + self.kills // 5, 12)
 
     def spawn_enemy(self):
         margin = 100
-        x = random.randint(margin, SCREEN_WIDTH - margin)
-        y = random.randint(margin, SCREEN_HEIGHT // 2 - margin)
+        radius = 40
+        y = radius
+        # try a few times to avoid spawning on top of another enemy
+        for _ in range(10):
+            x = random.randint(margin, SCREEN_WIDTH - margin)
+            if all(abs(x - e.position.x) > radius * 2 or e.position.y > radius * 3
+                for e in self.enemies):
+                break
         health = 50 + self.kills * 2
-        return Enemy(x, y, max_health=health)
+        return Enemy(x, y, radius=radius, max_health=health)
 
     def handle_click(self, pos):
         if self.upgrades.handle_click(pos):
@@ -88,6 +111,13 @@ class Game:
             shot.damage = self.click_damage
             self.shots.append(shot)
 
+
+    def on_wall_destroyed(self):
+        # placeholder: still decide what you want here
+        self.wall.health = self.wall.max_health
+        self.enemies.clear()
+        self.spawn_timer = 0.0
+
     def sync_towers(self):
         self.tower_count = min(self.tower_count, MAX_TOWERS)
 
@@ -97,7 +127,7 @@ class Game:
 
         # lay them out in a horizontal line, evenly spaced
         margin = 100
-        y = SCREEN_HEIGHT - margin - 60   # row sits just above the player
+        y = SCREEN_HEIGHT - margin - 80   # row sits just above the player
         count = len(self.towers)
         spacing = (SCREEN_WIDTH - 2 * margin) / max(count - 1, 1)
 
@@ -115,32 +145,55 @@ class Game:
     def update(self, dt):
         self.upgrades.update()
 
+        # --- spawning ---
+        self.spawn_timer += dt
+        if not self.enemies:
+            # never leave the screen empty
+            self.enemies.append(self.spawn_enemy())
+            self.spawn_timer = 0.0
+        elif (self.spawn_timer >= self.spawn_interval()
+              and len(self.enemies) < self.max_enemies()):
+            self.enemies.append(self.spawn_enemy())
+            self.spawn_timer = 0.0
+
+        # --- enemies vs wall ---
+        for enemy in self.enemies:
+            damage = enemy.update(dt, self.wall)
+            if damage and self.wall.take_damage(damage):
+                self.on_wall_destroyed()
+                break
+
+        # --- towers ---
         for tower in self.towers:
-            shot = tower.update(dt, [self.enemy])
+            shot = tower.update(dt, self.enemies)
             if shot:
                 self.shots.append(shot)
 
+        # --- shots ---
         screen_rect = self.screen.get_rect()
 
         for shot in self.shots[:]:
             shot.update(dt)
 
-            if shot.collides_with(self.enemy):
+            hit = next((e for e in self.enemies if shot.collides_with(e)), None)
+            if hit:
                 self.shots.remove(shot)
                 self.points += 1
 
-                if self.enemy.take_damage(shot.damage):
+                if hit.take_damage(shot.damage):
                     self.points += 10
                     self.kills += 1
-                    self.enemy = self.spawn_enemy()
+                    self.enemies.remove(hit)
 
             elif not screen_rect.collidepoint(shot.position):
-                self.shots.remove(shot)    
+                self.shots.remove(shot)
 
     def draw(self):
         self.screen.fill(SCREEN_COLOR)
 
-        self.enemy.draw(self.screen)
+        for enemy in self.enemies:
+            enemy.draw(self.screen)
+        self.wall.draw(self.screen)
         self.player.draw(self.screen)
 
         for tower in self.towers:
