@@ -6,7 +6,7 @@ class Button:
         self.rect = pygame.Rect(x, y, width, height)
         self.padding = padding
         self.enabled = True
-        self.font = pygame.font.Font(None, 24)
+        self.font = pygame.font.Font(None, 20)
         self.text = ""
         self.set_text(text)
 

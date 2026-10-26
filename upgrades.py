@@ -6,14 +6,14 @@ from constants import SCREEN_WIDTH, SCREEN_HEIGHT, MAX_TOWERS
 class Upgrade:
     def __init__(self, game, label, stat, start, step=1, base_cost=10, multiplier=1.5, max_level=None):
         self.game = game
-        self.label = label
+        self.label = label + " + " + str(step)
         self.stat = stat
         self.start = start
         self.step = step
         self.base_cost = base_cost
         self.multiplier = multiplier
         self.max_level = max_level      # None = unlimited
-        self.button = Button(0, 0, 200, 50, "")
+        self.button = Button(0, 0, 200, 30, "")
 
     def level(self):
         # how many times it has been bought, derived from the saved stat
@@ -47,23 +47,29 @@ class Upgrade:
 class Upgrades:
     def __init__(self, game, margin=20, gap=10):
         self.game = game
+        self.margin = margin
+        self.gap = gap
         self.list = [
-            Upgrade(game, "Click Damage",    "click_damage",    start=10,   step=5),
-            Upgrade(game, "Tower Damage",    "tower_damage",    start=1,   step=1),
+            Upgrade(game, "Click Damage",    "click_damage",    start=10,   step=10),
+            Upgrade(game, "Tower Damage",    "tower_damage",    start=1,   step=5),
             Upgrade(game, "Tower Fire Rate", "tower_fire_rate", start=0.5, step=0.5),
-            Upgrade(game, "Buy Tower", "tower_count", start=0, step=1, base_cost=500, max_level=MAX_TOWERS),
+            Upgrade(game, "Buy Tower",       "tower_count",     start=0,   step=1, base_cost=50),
         ]
+        self.update()
 
-        # Stack buttons upward from the bottom-right corner
-        y = SCREEN_HEIGHT - margin
+    def layout(self):
+        # Place buttons left to right along the bottom edge
+        x = self.margin
+        y = SCREEN_HEIGHT - self.margin
         for upgrade in self.list:
             rect = upgrade.button.rect
-            rect.bottomright = (SCREEN_WIDTH - margin, y)
-            y -= rect.height + gap
+            rect.bottomleft = (x, y)
+            x += rect.width + self.gap
 
     def update(self):
         for upgrade in self.list:
             upgrade.refresh_button()
+        self.layout()  # must come after refresh, since widths may have changed
 
     def draw(self, screen):
         for upgrade in self.list:
